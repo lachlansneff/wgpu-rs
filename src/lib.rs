@@ -1118,6 +1118,15 @@ fn range_to_offset_size<S: RangeBounds<BufferAddress>>(bounds: S) -> (BufferAddr
     (offset, size)
 }
 
+#[repr(transparent)]
+pub struct WriteOnly(std::cell::Cell<u8>);
+
+impl WriteOnly {
+    pub fn set(&self, v: u8) {
+        self.0.set(v);
+    }
+}
+
 pub struct BufferView<'a> {
     slice: BufferSlice<'a>,
     data: &'a [u8],
@@ -1129,6 +1138,12 @@ pub struct BufferViewMut<'a> {
     readable: bool,
 }
 
+impl BufferViewMut<'_> {
+    pub fn copy_from_slice(&mut self, data: &[u8]) {
+        self.data.copy_from_slice(data)
+    }
+}
+
 impl std::ops::Deref for BufferView<'_> {
     type Target = [u8];
 
@@ -1138,21 +1153,15 @@ impl std::ops::Deref for BufferView<'_> {
 }
 
 impl std::ops::Deref for BufferViewMut<'_> {
-    type Target = [u8];
+    type Target = [WriteOnly];
 
-    fn deref(&self) -> &[u8] {
-        assert!(
-            self.readable,
-            "Attempting to read a write-only mapping for buffer {:?}",
-            self.slice.buffer.id
-        );
-        self.data
-    }
-}
-
-impl std::ops::DerefMut for BufferViewMut<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.data
+    fn deref(&self) -> &[WriteOnly] {
+        // assert!(
+        //     self.readable,
+        //     "Attempting to read a write-only mapping for buffer {:?}",
+        //     self.slice.buffer.id
+        // );
+       unsafe { &* (self.data as *const [u8] as *const [WriteOnly]) }
     }
 }
 
