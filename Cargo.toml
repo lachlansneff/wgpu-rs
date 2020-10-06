@@ -71,6 +71,8 @@ path="examples/hello-compute/main.rs"
 test = true
 
 [patch."https://github.com/gfx-rs/wgpu"]
+wgpu-core = { git = "https://github.com/lachlansneff/wgpu", rev = "b84cfcb834cd3a447151fe9ebfb543ff558e2d76" }
+wgpu-types = { git = "https://github.com/lachlansneff/wgpu", rev = "b84cfcb834cd3a447151fe9ebfb543ff558e2d76" }
 #wgpu-types = { version = "0.6", path = "../wgpu/wgpu-types" }
 #wgpu-core = { version = "0.6", path = "../wgpu/wgpu-core" }
 
@@ -85,6 +87,10 @@ test = true
 #gfx-memory = { version = "0.2", path = "../gfx-extras/gfx-memory" }
 
 [patch.crates-io]
+gfx-hal = { git = "https://github.com/lachlansneff/gfx", rev = "01a81050eccc909428ab928c251ad8b1683fd45f" }
+gfx-backend-vulkan = { git = "https://github.com/lachlansneff/gfx", rev = "01a81050eccc909428ab928c251ad8b1683fd45f" }
+gfx-backend-empty = { git = "https://github.com/lachlansneff/gfx", rev = "01a81050eccc909428ab928c251ad8b1683fd45f" }
+gfx-backend-metal = { git = "https://github.com/lachlansneff/gfx", rev = "01a81050eccc909428ab928c251ad8b1683fd45f" }
 #gfx-hal = { version = "0.6", path = "../gfx/src/hal" }
 #gfx-backend-empty = { version = "0.6", path = "../gfx/src/backend/empty" }
 #gfx-backend-vulkan = { version = "0.6", path = "../gfx/src/backend/vulkan" }

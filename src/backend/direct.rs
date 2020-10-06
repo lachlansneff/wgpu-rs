@@ -12,7 +12,8 @@ use futures::future::{ready, Ready};
 use parking_lot::Mutex;
 use smallvec::SmallVec;
 use std::{
-    borrow::Cow::Borrowed, error::Error, fmt, marker::PhantomData, ops::Range, slice, sync::Arc,
+    borrow::Cow::Borrowed, error::Error, fmt, marker::PhantomData, num::NonZeroU64, ops::Range,
+    slice, sync::Arc,
 };
 use typed_arena::Arena;
 
@@ -1151,6 +1152,13 @@ impl crate::Context for Context {
         wgc::gfx_select!(buffer.id => global.buffer_unmap(buffer.id))
             .map_err(|err| err.with_context("In Buffer::get_mapped_range".to_string()))
             .unwrap_error_sink(&buffer.error_sink, || ());
+    }
+
+    unsafe fn get_buffer_device_address(&self, buffer: &Self::BufferId) -> NonZeroU64 {
+        let global = &self.0;
+        wgc::gfx_select!(buffer.id => global.device_get_buffer_address(buffer.id))
+            .map_err(|err| err.with_context("In Buffer::get_device_address".to_string()))
+            .unwrap_pretty()
     }
 
     fn swap_chain_get_current_texture_view(

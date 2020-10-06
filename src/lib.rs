@@ -16,7 +16,7 @@ use std::{
     fmt::{Debug, Display},
     future::Future,
     marker::PhantomData,
-    num::{NonZeroU32, NonZeroU8},
+    num::{NonZeroU32, NonZeroU64, NonZeroU8},
     ops::{Bound, Range, RangeBounds},
     sync::Arc,
     thread,
@@ -287,6 +287,7 @@ trait Context: Debug + Send + Sized + Sync {
         sub_range: Range<BufferAddress>,
     ) -> &mut [u8];
     fn buffer_unmap(&self, buffer: &Self::BufferId);
+    unsafe fn get_buffer_device_address(&self, buffer: &Self::BufferId) -> NonZeroU64;
     fn swap_chain_get_current_texture_view(
         &self,
         swap_chain: &Self::SwapChainId,
@@ -1715,6 +1716,11 @@ impl Buffer {
     pub fn unmap(&self) {
         self.map_context.lock().reset();
         Context::buffer_unmap(&*self.context, &self.id);
+    }
+
+    /// TODO: docs
+    pub unsafe fn get_device_address(&self) -> NonZeroU64 {
+        Context::get_buffer_device_address(&*self.context, &self.id)
     }
 }
 
