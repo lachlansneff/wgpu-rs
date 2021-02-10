@@ -1881,6 +1881,10 @@ impl crate::Context for Context {
     fn queue_get_timestamp_period(&self, _queue: &Self::QueueId) -> f32 {
         1.0 //TODO
     }
+
+    fn poll_all_devices(&self, _force_wait: bool) {
+        // Devices are polled automatically.
+    }
 }
 
 pub(crate) type SwapChainOutputDetail = ();

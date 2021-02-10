@@ -1858,6 +1858,14 @@ impl crate::Context for Context {
             }
         }
     }
+
+    fn poll_all_devices(&self, force_wait: bool) {
+        let global = &self.0;
+        match global.poll_all_devices(force_wait) {
+            Ok(()) => (),
+            Err(err) => self.handle_error_fatal(err, "Device::poll"),
+        }
+    }
 }
 
 #[derive(Debug)]

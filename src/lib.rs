@@ -442,6 +442,8 @@ trait Context: Debug + Send + Sized + Sync {
         command_buffers: I,
     );
     fn queue_get_timestamp_period(&self, queue: &Self::QueueId) -> f32;
+
+    fn poll_all_devices(&self, force_wait: bool);
 }
 
 /// Context for all other wgpu objects. Instance of wgpu.
@@ -453,6 +455,14 @@ trait Context: Debug + Send + Sized + Sync {
 #[derive(Debug)]
 pub struct Instance {
     context: Arc<C>,
+}
+
+/// A winit hook that integrates with the winit event loop
+/// and automatically polls devices internally.
+#[cfg(all(feature = "winit-hook", not(target_arch = "wasm32")))]
+pub struct WinitHook {
+    context: Arc<C>,
+    user_set_wait: bool,
 }
 
 /// Handle to a physical graphics and/or compute device.
@@ -1389,6 +1399,69 @@ impl Instance {
         layer: *mut std::ffi::c_void,
     ) -> Surface {
         self.context.create_surface_from_core_animation_layer(layer)
+    }
+
+    /// Integrate wgpu with the winit event loop to automatically poll devices
+    /// internally.
+    #[cfg(all(feature = "winit-hook", not(target_arch = "wasm32")))]
+    pub fn integrate_with_winit<T>(&self, event_loop: winit::event_loop::EventLoop<T>) -> winit::event_loop::EventLoop<T, WinitHook> {
+        event_loop.set_hook(WinitHook {
+            context: Arc::clone(&self.context),
+            user_set_wait: false,
+        })
+    }
+}
+
+#[cfg(all(feature = "winit-hook", not(target_arch = "wasm32")))]
+impl<T> winit::event_loop::Hook<T> for WinitHook {
+    fn run<F>(
+        &mut self,
+        handler: F,
+        event: winit::event::Event<'_, T>,
+        target: &winit::event_loop::EventLoopWindowTarget<T>,
+        control_flow: &mut winit::event_loop::ControlFlow,
+    ) where
+        F: FnOnce(winit::event::Event<'_, T>, &winit::event_loop::EventLoopWindowTarget<T>, &mut winit::event_loop::ControlFlow)
+    {
+        use winit::{
+            event::{Event, StartCause},
+            event_loop::ControlFlow,
+        };
+        use std::{
+            time::{Instant, Duration},
+            mem,
+        };
+
+        if mem::replace(&mut self.user_set_wait, false) {
+            match &event {
+                Event::NewEvents(StartCause::ResumeTimeReached { .. })
+                | Event::NewEvents(StartCause::WaitCancelled { requested_resume: Some(_), .. }) => {
+                    *control_flow = ControlFlow::Wait;
+                    return;
+                }
+                _ => {},
+            }
+        }
+
+        let was_polled = if let Event::RedrawEventsCleared = &event {
+            self.context.poll_all_devices(false);
+            true
+        } else {
+            false
+        };
+
+        handler(event, target, control_flow);
+
+        if was_polled {
+            match *control_flow {
+                ControlFlow::Wait => {
+                    self.user_set_wait = true;
+                    *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16));
+                },
+                ControlFlow::WaitUntil(_) => unimplemented!("ControlFlow::WaitUntil"),
+                _ => {}
+            }
+        }
     }
 }
 
